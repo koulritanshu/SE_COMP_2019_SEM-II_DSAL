@@ -1,74 +1,142 @@
 #include <iostream>
-#include <string>
+#define MAX 30
 using namespace std;
-#define MAX 50
 
 class Node{
-    int val;
-    Node* left;
-    Node* right;
+    int data;
+    Node*left;
+    Node*right;
 public:
     Node(){
-        val = 0;
-        left = right = NULL;
+        data = 0;
+        left = NULL;
+        right = NULL;
     }
     friend class OBST;
-};
-
-class opti{
-    int cost, weight, value;
-    friend class OBST;
-public:
-    opti(){
-        cost = weight = value = 0;
-    }
 };
 
 class OBST{
-    int key[MAX],p[MAX],q[MAX],cost,n;
-    opti arr[MAX][MAX];
+    int p[MAX],q[MAX];
+    int cost[MAX][MAX],weight[MAX][MAX],root[MAX][MAX];
+    int keys[MAX];
+    int n;
+    Node*head;
 public:
     OBST(){
+        head = NULL;
         for(int i=0;i<MAX;i++){
-            n = 0;
-            key[i] = 0;
             p[i] = 0;
             q[i] = 0;
+            keys[i] = 0;
+            for(int j=0;j<MAX;j++){
+                cost[i][j] = 0;
+                weight[i][j] = 0;
+                root[i][j] = 0;
+            }
         }
     }
     void input(){
+        cout << "Enter the number of keys: ";
         cin >> n;
-        cin >> q[0];
-        for(int i=1;i<n;i++){
-            cin >> key[i] >> p[i] >> q[i];
+        for(int i=1;i<=n;i++){
+            cout << "Enter key at index " << i << ": ";
+            cin >> keys[i];
+            cout << "Enter the successful probability: ";
+            cin >> p[i];
+        }
+        for(int i=0;i<=n;i++){
+            cout << "Enter the unsuccessful probability " << i << ": ";
+            cin >> q[i];
         }
     }
     int w(int i, int j){
-        if(i==j) return q[i];
-        return arr[i][j-1].weight + p[j] + q[j];
-    }   
-    int c(int i, int j){
-        if(i == j) return 0;
-        int mini = 214552;
-        for(int l=i+1;l<=j;l++){
-            mini = min(mini,arr[l][j].cost + arr[i][l-1].cost);
+        if(i==j){
+            return q[i];
         }
-        return mini + w(i,j);
+        return weight[i][j-1] + p[j] + q[j];
+    }   
+    int getcost(int i,int j){
+        if(i==j){
+            return 0;
+        }
+        else{
+            int mini = 10000;
+            int root_val;
+            for(int k=i+1;k<=j;k++){
+                int current = cost[i][k-1] + cost[k][j];
+                if(mini > current){
+                    mini = current;
+                    root_val = k;
+                }
+            }
+            root[i][j] = root_val;
+            return mini + weight[i][j];    
+        }
+    }
+    void min_cost(){
+        for(int c=0;c<=n;c++){
+            for(int i=0,j=c;i<=n&&j<=n;i++,j++){
+                weight[i][j] = w(i,j);
+                cost[i][j] = getcost(i,j);
+            }
+        }
+        cout << "Minimum Cost: " << cost[0][n]/weight[0][n] << endl;
+    }
+    Node* buildTree(Node* node, int i, int j){
+        if(i >= j){
+            return NULL;
+        }
+        else{
+            node = new Node();
+            node->data = keys[root[i][j]];
+            node->left = buildTree(node->left,i,root[i][j]-1);
+            node->right = buildTree(node->right,root[i][j],j);
+            return node;
+        }
     }
     void create(){
-        for(int c1=0;c1<n;c1++)
-        for(int i=0,j=c1;i<n && j<n; i++,j++){
-            arr[i][j].cost = c(i,j);
-            arr[i][j].weight = w(i,j);
+        head = buildTree(head,0,n);
+    }
+    void inorderhelper(Node* curr){
+        if(curr){
+            inorderhelper(curr->left);
+            cout << curr->data << " ";
+            inorderhelper(curr->right);
         }
-        cout<<"Cost: "<<arr[0][n-1].cost<<endl;
+    }
+    void inorder(){
+        cout << "------------------------" << endl;
+        inorderhelper(head);
+        cout << endl;
+        cout << "------------------------" << endl;
     }
 };
 
 int main()
 {
     OBST obj;
-    obj.input();
-    obj.create();
+    while(true){
+        cout << "0. Exit" << endl;
+        cout << "1. Input." << endl;
+        cout << "2. Minimum Cost." << endl;
+        cout << "3. Create Tree" << endl;
+        int ch;
+        cout << "Make choice: ";
+        cin >> ch;
+        if(ch == 0){
+            cout << "OK!" << endl;
+            break;
+        }
+        else if(ch == 1){
+            obj.input();
+        }
+        else if(ch == 2){
+            obj.min_cost();
+        }
+        else if(ch == 3){
+            obj.create();
+            obj.inorder();
+        }
+    }
     return 0;
 }
