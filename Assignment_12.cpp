@@ -1,112 +1,190 @@
 #include <iostream>
-#include <fstream>
-#include <map>
 #include <string>
+#include <fstream>
 #include <vector>
-#include <ios>
-#include <climits>
 using namespace std;
 
 class Employee{
-    string id;
     string name;
-    string city;
+    int id;
 public:
-    Employee(){}
-    Employee(string a,string b, string c){
-        id = a;
-        name = b;
-        city = c;
+    Employee(){
+        name = "";
+        id = 0;
     }
-    friend class DirectAccessFile;
-    int size(){
-        string obj = "";
-        obj = obj + id + " " + name + " " + city;
-        return (int)obj.size();
-    }
+    friend class DAF;
 };
 
-class DirectAccessFile{
-    map<string,int> hash;
-    string filename;
-    bool isEmpty = true;
+class DAF{
+    string fname;
+    int arr[50];
+    int num;
 public:
-    DirectAccessFile(string f){
-        filename = f;
+    DAF(string n, int number){
+        fname = n;
+        num = number;
+        for(int i=0;i<50;i++){
+            arr[i] = -1;
+        }
     }
-    void insertData(string id, string name, string city){
-        Employee emp(id,name,city);
+    int hashfunc(int ind){
+        return ind % num;
+    }
+    void dispTable(){
+        for(int i=0;i<num;i++){
+            cout << i << "-> " << arr[i] << endl;
+        }
+    }
+    void addRecord(string name, int id){
         ofstream obj;
-        int previous = INT_MIN;
-        if(isEmpty){
-            hash[id] = emp.size();
-            isEmpty = false;
+        obj.open(fname,ios::app|ios::ate);
+        int location = obj.tellp();
+        int hash = hashfunc(id);
+        if(arr[hash] == -1){
+            arr[hash] = location;
         }
         else{
-            int maxi = -1;
-            for(auto i:hash){
-                maxi = max(maxi,i.second);
+            int temp = hash + 1;
+            while(temp!=hash){
+                if(temp == num){
+                    temp = 0;
+                }
+                else{
+                    if(arr[temp] == -1){
+                        arr[temp] = location;
+                        break;
+                    }
+                    else{
+                        temp = temp + 1;
+                    }
+                }
             }
-            hash[id] = maxi + emp.size();
+            if(temp == hash){
+                cout << "Table Full." << endl;
+                obj.close();
+                return;
+            }
         }
-        obj.open(filename,ios::app);
-        obj << emp.id << " " << emp.name << " " << emp.city << "\n";
+        obj << id << " " << name << "\n";
         obj.close();
     }
-    void printFileData(){
-        string s;
-        ifstream obj;
-        obj.open(filename);
-        if(!obj){
-            cout << ">> File could not be opened." << endl;
-            return;
+    void searchRecord(int id){
+        int index = hashfunc(id);
+        if(arr[index] == -1){
+            cout << "Record not present." << endl;
         }
-        while(!obj.eof()){
-            getline(obj,s);
-            cout << s << endl;
+        else{
+            int count = 0;
+            while(count != num){
+                count++;
+                if(index == num){
+                    index = 0;
+                }
+                int loc = arr[index];
+                ifstream obj;
+                obj.open(fname);
+                obj.seekg(loc,ios::beg);
+                string s;
+                getline(obj,s);
+                string x = "";
+                int i = 0;
+                while(s[i] != ' '){
+                    x += s[i];
+                    i++;
+                }
+                if(x == to_string(id)){
+                    cout << "Record Found: " << s << endl;
+                    return;
+                }
+                index++;
+            }
+            cout << "Record not present" << endl;
         }
-        obj.close();
     }
-    void deleteRecord(string id){
+    void insert_records(int iddel,vector<string> v){
+        for(int i=0;i<v.size()-1;i++)
+        {
+            string curr = v[i];
+            string id = "";
+            string name = "";
+            int ind = 0;
+            while(curr[ind]!=' '){
+                id += curr[ind];
+                ind++;
+            }
+            if(id == to_string(iddel)) continue;
+            ind++;
+            while(ind != curr.size()){
+                name += curr[ind];
+                ind++;
+            }
+            addRecord(name,stoi(id));
+        }
+    }
+    void del(int id){
         vector<string> v;
         ifstream obj;
-        obj.open(filename);
+        obj.open(fname);
+        string s;
         while(!obj.eof()){
-            string s;
             getline(obj,s);
             v.push_back(s);
         }
         obj.close();
-        ofstream ob;
-        ob.open(filename);
-        for(int i=0;i<(int)v.size();i++){
-            string id1 = "";
-            id1 += v[i][0]; 
-            id1 += v[i][1]; 
-            id1 += v[i][2];
-            if(id1==id) continue;
-            ob << v[i] << "\n";
+        ofstream obj2;
+        obj2.open(fname,ios::trunc);
+        obj2.close();
+        for(int i=0;i<num;i++){
+            arr[i] = -1;
         }
-        obj.close();
+        insert_records(id,v);
     }
 };
 
+
 int main()
 {
-    cout << "-------------------CREATING A FILE-------------------" << endl;
-    DirectAccessFile obj("emplyee.txt");
-    cout << "------------------ADDING EMP. DETAILS----------------" << endl;
-    obj.insertData("213","Ritanshu","Jammu");
-    obj.insertData("214","Tom","New York");
-    obj.insertData("215","Andrew","London");
-    obj.insertData("216","Lisa","Paris");
-    obj.insertData("217","Ajay","Jaipur");
-    cout << "-------------------PRINTING RECORDS------------------" << endl;
-    obj.printFileData();
-    cout << "------------------DELETING A RECORD------------------" << endl;
-    obj.deleteRecord("215");
-    obj.deleteRecord("217");
-    obj.printFileData();
-    cout << "-----------------------EXIT--------------------------" << endl;
+    cout << "Enter the size of the table: ";
+    int n;
+    cin >> n;
+    DAF obj("DAF.txt",n);
+    while(true){
+        cout << "1. Insert record." << endl;
+        cout << "2. Search record." << endl;
+        cout << "3. Delete record." << endl;
+        cout << "4. Display table." << endl;
+        cout << "5. Exit." << endl;
+        int ch;
+        cout << "Make choice: ";
+        cin >> ch;
+        if(ch == 1){
+            cout << "Enter id: ";
+            int id;
+            cin >> id;
+            cout << "Enter name: ";
+            string name;
+            cin >> name;
+            obj.addRecord(name,id);
+        }
+        else if(ch == 2){
+            cout << "Enter id: ";
+            int id;
+            cin >> id;
+            obj.searchRecord(id);
+        }
+        else if(ch == 3){
+            cout << "Enter id: ";
+            int id;
+            cin >> id;
+            obj.del(id);
+        }
+        else if(ch == 4){
+            obj.dispTable();
+        }
+        else if(ch == 5){
+            cout << "OK!" << endl;
+            break;
+        }
+    }
     return 0;
 }
